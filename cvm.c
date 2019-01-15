@@ -83,6 +83,8 @@ cells_core_dump(int depth)
 extern int
 cells_run_code(unsigned char* code)
 {
+	int jump_c;
+	unsigned char* code_start = code;
 	while(*code != CELLINS_X_STOP)
 	{
 		switch(*code++)
@@ -106,6 +108,26 @@ cells_run_code(unsigned char* code)
 			case CELLINS_X_PUT_OP:
 			   CELL_PTR->_op = *(int*)(code);
 			   code += sizeof(int);
+			   break;
+			case CELLINS_X_PRINT_IN:
+			   printf("%d\n", CELL_PTR->_in);
+			   break;
+			case CELLINS_X_PRINT_OUT:
+			   printf("%d\n", CELL_PTR->_out);
+			case CELLINS_X_PUSH_BACK:
+			   assert(CELL_PTR != CELL_BEGIN);
+			   (CELL_PTR - 1)->_in = CELL_PTR->_out;
+			   break;
+			case CELLINS_X_PUSH_NEXT:
+			   assert((CELL_PTR + 1) != CELL_END);
+			   (CELL_PTR + 1)->_in = CELL_PTR->_out;
+			   break;
+			case CELLINS_X_CALL_OP:
+			   // call the op apply function
+			   break;
+			case CELLINS_X_JUMP:
+			   jump_c = (*(int*)(code));
+			   code = code_start + jump_c;
 			   break;
 			default:
 			   fprintf(stderr, "INS ERROR: Unkown instruction code byte %u\n", *code);
