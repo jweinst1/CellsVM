@@ -48,9 +48,11 @@ static const struct Cell* const CELL_END = CELLS + CELL_AMNT;
 #define CELLINS_X_PUSH_BACK  8
 #define CELLINS_X_PUSH_NEXT  9
 #define CELLINS_X_CALL_OP    10
+#define CELLINS_X_JUMP       11
 /**
  * Byte Value Type labels
  */
+#define CELLINS_T_STOP 0 // Marks end of value list for op
 #define CELLINS_T_INT  1
 #define CELLINS_T_PLUS 2
 #define CELLINS_T_SUB  3
@@ -83,7 +85,7 @@ cells_run_code(unsigned char* code)
 {
 	while(*code != CELLINS_X_STOP)
 	{
-		switch(*code)
+		switch(*code++)
 		{
 			case CELLINS_X_STOP:
 			   return 1;
@@ -92,6 +94,18 @@ cells_run_code(unsigned char* code)
 			   break;
 			case CELLINS_X_DEC_PTR:
 			   assert((CELL_PTR--) != CELL_BEGIN);
+			   break;
+			case CELLINS_X_PUT_IN:
+			   CELL_PTR->_in = *(int*)(code);
+			   code += sizeof(int);
+			   break;
+			case CELLINS_X_PUT_OUT:
+			   CELL_PTR->_out = *(int*)(code);
+			   code += sizeof(int);
+			   break;
+			case CELLINS_X_PUT_OP:
+			   CELL_PTR->_op = *(int*)(code);
+			   code += sizeof(int);
 			   break;
 			default:
 			   fprintf(stderr, "INS ERROR: Unkown instruction code byte %u\n", *code);
