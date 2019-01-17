@@ -1,11 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "cvml.h"
 #include <assert.h>
 
-// Prototype for tiny functional VM
-// Uses cell based approach, different than
-// stack or register
+// Core Library Functionality for Cell Virtual Machine
+// Uses cells as design for a virtual machine as 
+// opposed to a stack or registers.
 
 #ifndef CELL_AMNT
 #define CELL_AMNT 1000
@@ -14,18 +12,7 @@
 #define PRINT_FILE_LINE printf("At line %u in '%s':\n", __LINE__, __FILE__)
 #define PRINT_FILE_LINE_T(title) printf("<%s> At line %u in '%s':\n", title, __LINE__, __FILE__)
 
-/**
- * A structure representing a function cell.
- * The cell has two fields, in and out.
- * in is the incoming value, out is the result value.
- * op is the operation to perform from in to out
- */
-struct Cell
-{
-	int _in;
-	int _op;
-	int _out;
-};
+
 // This is the cell board
 // Multiple cells in a row represent nested values, that should be evaluated first.
 static struct Cell CELLS[CELL_AMNT];
@@ -42,43 +29,21 @@ static const struct Cell* const CELL_END = CELLS + CELL_AMNT;
  */
 #define CELL_COPY_IN_OUT(cell) (cell->_out = cell->_in)
 
-/**
- * Byte code instruction labels
- * uses -----
- * - Stop: Terminates the running of instructions, aka exit.
- * - inc ptr: Increments the cell pointer by one. Cannot increment pointer 
- *            to end cell
- * - dec ptr: decrements the cell pointer by one. Cannot decrement before begin
- *            pointer.
- */
-#define CELLINS_X_STOP       0
-#define CELLINS_X_INC_PTR    1
-#define CELLINS_X_DEC_PTR    2
-#define CELLINS_X_PUT_IN     3
-#define CELLINS_X_PUT_OUT    4
-#define CELLINS_X_PUT_OP     5
-#define CELLINS_X_PUT_IO     6
-#define CELLINS_X_PRINT_IN   7
-#define CELLINS_X_PRINT_OUT  8
-#define CELLINS_X_PUSH_BACK  9
-#define CELLINS_X_PUSH_NEXT  10
-#define CELLINS_X_JUMP       11
-#define CELLINS_X_END        12
-#define CELLINS_X_INT        13
-#define CELLINS_X_IN_FIELD   14
-#define CELLINS_X_PLUS       15
-#define CELLINS_x_SUB        16
-
 
 
 static void 
-cells_clean(void)
+_cells_clean(void)
 {
 	memset(CELLS, 0, CELL_MEM_SIZE);
 }
 
+void cells_clean(void)
+{
+	_cells_clean();
+}
+
 static void
-cells_core_dump(int depth)
+_cells_core_dump(int depth)
 {
 	int i;
 	assert(depth <= CELL_AMNT);
@@ -92,7 +57,12 @@ cells_core_dump(int depth)
 	}
 }
 
-extern unsigned
+void cells_core_dump(int depth)
+{
+	_cells_core_dump(depth);
+}
+
+unsigned
 cells_run_code(unsigned char* code)
 {
 	 unsigned char * code_start = code;
@@ -119,7 +89,7 @@ STATE_BASE:
 			 goto STATE_BASE;
 	    case CELLINS_X_PUT_IO:
 	         // copies in value to out field
-	         CELL_PTR->_out = CELL_PTR->in;
+	         CELL_PTR->_out = CELL_PTR->_in;
 	         goto STATE_BASE;
 		case CELLINS_X_PUT_OP:
 			 CELL_PTR->_op = *(int*)(code);
@@ -156,7 +126,7 @@ STATE_HANDLE_IN_FIELD:
      // the in field as the other operand, as opposed to the bytecode stream
      // usually after a CELLINS_X_PUSH_BACK or 
      // CELLINS_X_PUSH_NEXT occurs.
-     switch(CELL_PTR->op)
+     switch(CELL_PTR->_op)
      {
      	case CELLINS_X_PLUS:
      	    CELL_PTR->_out += CELL_PTR->_in;
@@ -185,26 +155,11 @@ STATE_HANDLE_INT:
      }
 STATE_UNKNOWN_BYTE:
      fprintf(stderr, "Error: Unknown byte: '%u' found in byte code.\n", *(code - 1));
-     cells_core_dump(10);
+     _cells_core_dump(10);
      exit(2);
 STATE_EXIT:
-     cells_core_dump(30);
+     _cells_core_dump(30);
      exit(2);
 STATE_STOP:
 	 return code - code_start;
-}
-
-static unsigned char test_code[] = {
-	CELLINS_X_PUT_OUT, 9, 0, 0, 0,
-	CELLINS_X_PUT_OP, CELLINS_X_PLUS, 0, 0, 0,
-	CELLINS_X_PRINT_OUT
-};
-
-int main(int argc, char const *argv[])
-{
-	cells_clean();
-	cells_core_dump(10);
-	cells_run_code(test_code);
-	cells_core_dump(10);
-	return 0;
 }
